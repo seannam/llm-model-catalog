@@ -1,3 +1,7 @@
+## Unreleased
+
+_Adopted by /version:adopt; prior history below is preserved as-is._
+
 # Changelog
 
 All notable changes to `@indiecraft/llm-model-catalog` are documented here.

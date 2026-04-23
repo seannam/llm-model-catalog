@@ -1,0 +1,115 @@
+# Auto-release on push to main.
+#
+# Modeled on ios_portfolio_manager/.github/workflows/release.yml. Pure bash.
+# No pnpm/npm/pip install, no builds, no tests. Runs in ~10-20 seconds.
+#
+# RULE: NEVER add build or test steps here. This workflow exists only to
+# compute the next version, write it to manifests, commit, tag, and create
+# a GitHub release. Builds belong in a separate deploy workflow (or on
+# Vercel/Dokploy which auto-build from the tag).
+#
+# Relies on the vendored `scripts/version/*.sh` that `/version:install`
+# copies into the repo. Uses `scripts/version/lib/commit-bump.sh` to
+# decide the bump kind from conventional commits.
+
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/auto-release-on-push.yml'
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Loop guard: skip commits we created ourselves (release bumps and
+    # follow-up spec-status commits pushed by scripts/version/release.sh).
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):') && !startsWith(github.event.head_commit.message, 'chore(specs):')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve last tag and decide bump
+        id: decide
+        run: |
+          set -euo pipefail
+          LAST_TAG="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -1 || true)"
+          if [ -n "$LAST_TAG" ]; then
+            RANGE="${LAST_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+          BUMP="$(./scripts/version/lib/commit-bump.sh "$RANGE" --strict-semver)"
+          echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+          echo "range=$RANGE"       >> "$GITHUB_OUTPUT"
+          echo "bump=$BUMP"          >> "$GITHUB_OUTPUT"
+          echo "Bump decision: $BUMP (range: $RANGE)"
+
+      - name: Exit if no release is needed
+        if: steps.decide.outputs.bump == 'none'
+        run: |
+          echo "No release-worthy commits since ${{ steps.decide.outputs.last_tag || 'repo start' }}. Skipping."
+
+      - name: Compute next version
+        id: version
+        if: steps.decide.outputs.bump != 'none'
+        run: |
+          set -euo pipefail
+          CURRENT="$(./scripts/version/current.sh --raw)"
+          NEXT="$(
+            . ./scripts/version/lib/common.sh
+            bump_version "$CURRENT" "${{ steps.decide.outputs.bump }}"
+          )"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT"       >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEXT"       >> "$GITHUB_OUTPUT"
+
+      - name: Sync manifests
+        if: steps.decide.outputs.bump != 'none'
+        run: |
+          set -euo pipefail
+          PRESET="$(tr -d '[:space:]' < .version-preset | cut -d: -f1)"
+          ./scripts/version/sync.sh "$PRESET" "${{ steps.version.outputs.next }}"
+
+      - name: Update CHANGELOG.md
+        if: steps.decide.outputs.bump != 'none'
+        run: |
+          set -euo pipefail
+          ./scripts/version/changelog.sh \
+            --version "${{ steps.version.outputs.next }}" \
+            --append \
+            --output CHANGELOG.md
+
+      - name: Commit, tag, push, release
+        if: steps.decide.outputs.bump != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage everything the preset + changelog touched. Read sync_targets
+          # from the vendored preset JSON, not $HOME (CI has no ~/.claude).
+          PRESET="$(tr -d '[:space:]' < .version-preset | cut -d: -f1)"
+          git add VERSION CHANGELOG.md $(jq -r '.sync_targets[].path' "scripts/version/presets/${PRESET}.json" 2>/dev/null || true) 2>/dev/null || true
+          git add -A
+
+          git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
+          git push origin HEAD
+
+          # Delegate tag + GitHub release to the vendored release.sh.
+          ./scripts/version/release.sh cut \
+            --version "${{ steps.version.outputs.next }}"
