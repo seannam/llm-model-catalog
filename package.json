@@ -1,6 +1,6 @@
 {
   "name": "@indiecraft/llm-model-catalog",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Dynamically discover and resolve Claude / Straico / OpenRouter / Ollama models from each provider's /models endpoint, with a pluggable catalog store.",
   "license": "MIT",
   "author": "Sean Nam <sean@indiecraft.net>",
