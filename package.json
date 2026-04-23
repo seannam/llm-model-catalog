@@ -1,0 +1,78 @@
+{
+  "name": "@indiecraft/llm-model-catalog",
+  "version": "0.1.0",
+  "description": "Dynamically discover and resolve Claude / Straico / OpenRouter / Ollama models from each provider's /models endpoint, with a pluggable catalog store.",
+  "license": "MIT",
+  "author": "Sean Nam <sean@indiecraft.net>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./postgres": {
+      "import": "./dist/stores/postgres.js",
+      "types": "./dist/stores/postgres.d.ts"
+    },
+    "./memory": {
+      "import": "./dist/stores/memory.js",
+      "types": "./dist/stores/memory.d.ts"
+    },
+    "./migration": {
+      "import": "./dist/migration.js",
+      "types": "./dist/migration.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "pg": "^8.13.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seannam/llm-model-catalog.git"
+  },
+  "keywords": [
+    "llm",
+    "anthropic",
+    "claude",
+    "straico",
+    "openrouter",
+    "ollama",
+    "catalog",
+    "model-discovery"
+  ],
+  "bugs": {
+    "url": "https://github.com/seannam/llm-model-catalog/issues"
+  },
+  "homepage": "https://github.com/seannam/llm-model-catalog#readme"
+}

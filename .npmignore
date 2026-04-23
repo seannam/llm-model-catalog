@@ -1,0 +1,9 @@
+src/
+tests/
+tsconfig.json
+tsconfig.build.json
+tsconfig.tsbuildinfo
+tsconfig.build.tsbuildinfo
+vitest.config.ts
+.npmignore
+node_modules/
