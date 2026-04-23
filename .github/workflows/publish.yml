@@ -17,11 +17,13 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
-      # Trusted Publishing (OIDC) needs npm >= 11.5.1; pin latest.
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1. Pin a specific
+      # release rather than `npm@latest`: latest can land broken (e.g.
+      # `MODULE_NOT_FOUND: promise-retry` in some 11.x publishes).
       # No NODE_AUTH_TOKEN: npm exchanges the GitHub OIDC token for a
       # short-lived publish credential after Trusted Publisher is
       # configured on the package's npm settings page.
-      - run: npm install -g npm@latest
+      - run: npm install -g npm@11.5.1
       - run: npm ci
       - run: npm run build
       - run: npm test
