@@ -1,3 +1,9 @@
+# Changelog
+
+## [0.1.1] - 2026-04-23
+
+_Changes since repo start._
+
 ## Unreleased
 
 _Adopted by /version:adopt; prior history below is preserved as-is._
